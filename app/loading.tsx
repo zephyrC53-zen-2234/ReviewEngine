@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="container page" aria-label="Loading" aria-busy="true"><div className="skeleton" style={{height:140,marginBottom:30}}/><div className="product-grid">{[1,2,3,4].map(i=><div className="skeleton" key={i}/>)}</div></main>}

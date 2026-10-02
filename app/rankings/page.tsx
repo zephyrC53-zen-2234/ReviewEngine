@@ -1,0 +1,4 @@
+import {getProducts} from '@/lib/data';
+import {Catalog} from '@/components/catalog';
+export const metadata={title:'Community Rankings',description:'The highest-rated apps and websites, ranked using community ratings and Bayesian scoring.'};
+export default async function Rankings(){return <main className="container page"><header className="page-heading"><span className="eyebrow">THE PEOPLE HAVE SPOKEN</span><h1>The best rise to the top.</h1><p>Explore the community leaderboard. Thoughtful rankings balance quality with the confidence that comes from more reviews.</p></header><Catalog products={await getProducts()}/><p className="hint">Highest rated uses Bayesian ranking: (sum of ratings + 20 × 3.5) ÷ (rating count + 20). Most popular uses total ratings. Fastest rising uses recent ratings, review activity, and daily unique visits.</p></main>}

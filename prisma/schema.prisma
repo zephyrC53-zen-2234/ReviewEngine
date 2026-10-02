@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client"
+  output = "../generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  USER
+  ADMIN
+}
+model User {
+  id String @id @default(cuid())
+  username String @unique
+  email String @unique
+  passwordHash String
+  avatar String?
+  role Role @default(USER)
+  disabled Boolean @default(false)
+  isSample Boolean @default(false)
+  createdAt DateTime @default(now())
+  ratings Rating[]
+  reviews Review[]
+  votes ReviewVote[]
+  reports Report[]
+}
+model Category {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String
+  icon String @default("Layers")
+  createdAt DateTime @default(now())
+  products Product[]
+}
+model Product {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String
+  logo String?
+  color String @default("#7756e8")
+  websiteUrl String
+  pros String[]
+  cons String[]
+  categoryId String
+  category Category @relation(fields:[categoryId],references:[id],onDelete:Restrict)
+  createdAt DateTime @default(now())
+  ratings Rating[]
+  reviews Review[]
+  visits Visit[]
+  @@index([categoryId])
+}
+model Rating {
+  id String @id @default(cuid())
+  userId String
+  productId String
+  overall Int
+  easeOfUse Int?
+  features Int?
+  performance Int?
+  value Int?
+  userExperience Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  @@unique([userId,productId])
+  @@index([productId,createdAt])
+}
+model Review {
+  id String @id @default(cuid())
+  userId String
+  productId String
+  rating Int
+  title String
+  content String
+  approved Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  votes ReviewVote[]
+  reports Report[]
+  @@unique([userId,productId])
+  @@index([productId,approved,createdAt])
+}
+model ReviewVote {
+  id String @id @default(cuid())
+  userId String
+  reviewId String
+  helpful Boolean
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  review Review @relation(fields:[reviewId],references:[id],onDelete:Cascade)
+  @@unique([userId,reviewId])
+}
+model Report {
+  id String @id @default(cuid())
+  userId String
+  reviewId String
+  reason String
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  review Review @relation(fields:[reviewId],references:[id],onDelete:Cascade)
+  @@unique([userId,reviewId])
+  @@index([status])
+}
+model Visit {
+  id String @id @default(cuid())
+  productId String
+  visitorHash String
+  day String
+  createdAt DateTime @default(now())
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  @@unique([productId,visitorHash,day])
+  @@index([productId,createdAt])
+}
+model RateLimit {
+  key String @id
+  count Int @default(1)
+  expiresAt DateTime
+}
