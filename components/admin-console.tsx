@@ -1,13 +1,107 @@
 'use client';
-import {useState} from 'react';
-import {useRouter} from 'next/navigation';
-type Category={id:string;name:string;slug:string;description:string;icon:string};
-type Product={id:string;name:string;slug:string;description:string;categoryId:string;websiteUrl:string;logo:string|null;color:string;pros:string[];cons:string[]};
-type Review={id:string;title:string;content:string;approved:boolean;user:{username:string};product:{name:string}};
-type User={id:string;username:string;email:string;disabled:boolean;role:string};
-type Report={id:string;reason:string;status:string;user:{username:string};review:{title:string;content:string}};
-export function AdminConsole({categories,products,reviews,users,reports}:{categories:Category[];products:Product[];reviews:Review[];users:User[];reports:Report[]}){const [tab,setTab]=useState('products'),[editing,setEditing]=useState<Product|Category|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);const router=useRouter();async function mutate(path:string,method:string,body?:object){setBusy(true);setError('');try{const r=await fetch(`/api/admin/${path}`,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const result=await r.json();if(!r.ok)throw Error(result.error);router.refresh();return true;}catch(e){setError((e as Error).message);return false;}finally{setBusy(false);}}
-async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const form=new FormData(e.currentTarget);const data:Record<string,unknown>=Object.fromEntries(form.entries());delete data.file;if(tab==='products'){data.pros=String(data.pros).split('\n').map(s=>s.trim()).filter(Boolean);data.cons=String(data.cons).split('\n').map(s=>s.trim()).filter(Boolean);const file=form.get('file');if(file instanceof File&&file.size){setBusy(true);try{const body=new FormData();body.set('file',file);const r=await fetch('/api/upload',{method:'POST',body});const result=await r.json();if(!r.ok)throw Error(result.error);data.logo=result.url;}catch(e){setError((e as Error).message);setBusy(false);return;}}}const ok=await mutate(`${tab}${editing?`/${editing.id}`:''}`,editing?'PATCH':'POST',data);if(ok){setEditing(null);(e.target as HTMLFormElement).reset();}}
-function remove(id:string){if(confirm('Delete this item? Product deletion also removes its ratings, reviews, and reports.'))mutate(`${tab}/${id}`,'DELETE');}
-const ep=editing as Product|null;
-return <><div className="admin-tabs">{['products','categories','reviews','users','reports'].map(t=><button key={t} className={tab===t?'active':''} onClick={()=>{setTab(t);setEditing(null);setError('');}}>{t[0].toUpperCase()+t.slice(1)}</button>)}</div>{error&&<p className="form-error" role="alert">{error}</p>}{(tab==='products'||tab==='categories')?<div className="admin-layout"><section className="panel"><h2>{editing?'Edit':'Add'} {tab==='products'?'product':'category'}</h2><form key={`${tab}-${editing?.id||'new'}`} className="form-stack" onSubmit={save}><label>Name<input name="name" required defaultValue={editing?.name}/></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" defaultValue={editing?.slug}/></label><label>Description<textarea name="description" required defaultValue={editing?.description}/></label>{tab==='products'?<><label>Category<select name="categoryId" required defaultValue={ep?.categoryId}>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Website<input name="websiteUrl" type="url" required defaultValue={ep?.websiteUrl}/></label><label>Logo URL<input name="logo" defaultValue={ep?.logo||''}/></label><label>Or upload logo<input name="file" type="file" accept="image/png,image/jpeg,image/webp"/></label><label>Fallback color<input name="color" type="color" defaultValue={ep?.color||'#7756e8'}/></label><label>Pros (one per line)<textarea name="pros" defaultValue={ep?.pros.join('\n')}/></label><label>Cons (one per line)<textarea name="cons" defaultValue={ep?.cons.join('\n')}/></label></>:<label>Icon name<input name="icon" defaultValue={(editing as Category|null)?.icon||'Layers'}/></label>}<button className="button primary" disabled={busy}>{busy?'Saving…':'Save'}</button>{editing&&<button className="text-button" type="button" onClick={()=>setEditing(null)}>Cancel edit</button>}</form></section><section className="panel admin-list"><h2>{tab==='products'?'Products':'Categories'}</h2>{(tab==='products'?products:categories).map(item=><div key={item.id} className="admin-item"><div><strong>{item.name}</strong><p>/{item.slug}</p></div><div><button className="text-button" onClick={()=>setEditing(item)}>Edit</button><button disabled={busy} className="text-button danger" onClick={()=>remove(item.id)}>Delete</button></div></div>)}</section></div>:<section className="panel">{tab==='reviews'&&reviews.map(r=><div className="admin-item" key={r.id}><div><strong>{r.title||'Untitled review'}</strong><p>{r.user.username} · {r.product.name} · {r.approved?'Visible':'Hidden'}</p><p>{r.content}</p></div><button className="text-button" disabled={busy} onClick={()=>mutate(`reviews/${r.id}`,'PATCH',{approved:!r.approved})}>{r.approved?'Hide review':'Approve review'}</button></div>)}{tab==='users'&&users.map(u=><div className="admin-item" key={u.id}><div><strong>{u.username}</strong><p>{u.email} · {u.role} · {u.disabled?'Disabled':'Active'}</p></div><button className="text-button" disabled={busy} onClick={()=>mutate(`users/${u.id}`,'PATCH',{disabled:!u.disabled})}>{u.disabled?'Enable':'Disable'}</button></div>)}{tab==='reports'&&(reports.length?reports.map(r=><div className="admin-item" key={r.id}><div><strong>{r.reason}</strong><p>Reported by {r.user.username} · {r.status}</p><p>{r.review.title}: {r.review.content}</p></div>{r.status==='OPEN'&&<button className="text-button" disabled={busy} onClick={()=>mutate(`reports/${r.id}`,'PATCH')}>Resolve</button>}</div>):<div className="empty"><h3>All clear.</h3><p>No reported reviews.</p></div>)}</section>}</>}
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+type Category = {
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    icon: string;
+};
+type Product = {
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    categoryId: string;
+    websiteUrl: string;
+    logo: string | null;
+    color: string;
+    pros: string[];
+    cons: string[];
+};
+type Review = {
+    id: string;
+    title: string;
+    content: string;
+    approved: boolean;
+    user: {
+        username: string;
+    };
+    product: {
+        name: string;
+    };
+};
+type User = {
+    id: string;
+    username: string;
+    email: string;
+    disabled: boolean;
+    role: string;
+};
+type Report = {
+    id: string;
+    reason: string;
+    status: string;
+    user: {
+        username: string;
+    };
+    review: {
+        title: string;
+        content: string;
+    };
+};
+export function AdminConsole({ categories, products, reviews, users, reports }: {
+    categories: Category[];
+    products: Product[];
+    reviews: Review[];
+    users: User[];
+    reports: Report[];
+}) {
+    const [tab, setTab] = useState('products'), [editing, setEditing] = useState<Product | Category | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+    const router = useRouter();
+    async function mutate(path: string, method: string, body?: object) { setBusy(true); setError(''); try {
+        const r = await fetch(`/api/admin/${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+        const result = await r.json();
+        if (!r.ok)
+            throw Error(result.error);
+        router.refresh();
+        return true;
+    }
+    catch (e) {
+        setError((e as Error).message);
+        return false;
+    }
+    finally {
+        setBusy(false);
+    } }
+    async function save(e: React.FormEvent<HTMLFormElement>) { e.preventDefault(); const form = new FormData(e.currentTarget); const data: Record<string, unknown> = Object.fromEntries(form.entries()); delete data.file; if (tab === 'products') {
+        data.pros = String(data.pros).split('\n').map(s => s.trim()).filter(Boolean);
+        data.cons = String(data.cons).split('\n').map(s => s.trim()).filter(Boolean);
+        const file = form.get('file');
+        if (file instanceof File && file.size) {
+            setBusy(true);
+            try {
+                const body = new FormData();
+                body.set('file', file);
+                const r = await fetch('/api/upload', { method: 'POST', body });
+                const result = await r.json();
+                if (!r.ok)
+                    throw Error(result.error);
+                data.logo = result.url;
+            }
+            catch (e) {
+                setError((e as Error).message);
+                setBusy(false);
+                return;
+            }
+        }
+    } const ok = await mutate(`${tab}${editing ? `/${editing.id}` : ''}`, editing ? 'PATCH' : 'POST', data); if (ok) {
+        setEditing(null);
+        (e.target as HTMLFormElement).reset();
+    } }
+    function remove(id: string) { if (confirm('Delete this item? Product deletion also removes its ratings, reviews, and reports.'))
+        mutate(`${tab}/${id}`, 'DELETE'); }
+    const ep = editing as Product | null;
+    return <><div className="admin-tabs">{['products', 'categories', 'reviews', 'users', 'reports'].map(t => <button key={t} className={tab === t ? 'active' : ''} onClick={() => { setTab(t); setEditing(null); setError(''); }}>{t[0].toUpperCase() + t.slice(1)}</button>)}</div>{error && <p className="form-error" role="alert">{error}</p>}{(tab === 'products' || tab === 'categories') ? <div className="admin-layout"><section className="panel"><h2>{editing ? 'Edit' : 'Add'} {tab === 'products' ? 'product' : 'category'}</h2><form key={`${tab}-${editing?.id || 'new'}`} className="form-stack" onSubmit={save}><label>Name<input name="name" required defaultValue={editing?.name}/></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" defaultValue={editing?.slug}/></label><label>Description<textarea name="description" required defaultValue={editing?.description}/></label>{tab === 'products' ? <><label>Category<select name="categoryId" required defaultValue={ep?.categoryId}>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Website<input name="websiteUrl" type="url" required defaultValue={ep?.websiteUrl}/></label><label>Logo URL<input name="logo" defaultValue={ep?.logo || ''}/></label><label>Or upload logo<input name="file" type="file" accept="image/png,image/jpeg,image/webp"/></label><label>Fallback color<input name="color" type="color" defaultValue={ep?.color || '#7756e8'}/></label><label>Pros (one per line)<textarea name="pros" defaultValue={ep?.pros.join('\n')}/></label><label>Cons (one per line)<textarea name="cons" defaultValue={ep?.cons.join('\n')}/></label></> : <label>Icon name<input name="icon" defaultValue={(editing as Category | null)?.icon || 'Layers'}/></label>}<button className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>{editing && <button className="text-button" type="button" onClick={() => setEditing(null)}>Cancel edit</button>}</form></section><section className="panel admin-list"><h2>{tab === 'products' ? 'Products' : 'Categories'}</h2>{(tab === 'products' ? products : categories).map(item => <div key={item.id} className="admin-item"><div><strong>{item.name}</strong><p>/{item.slug}</p></div><div><button className="text-button" onClick={() => setEditing(item)}>Edit</button><button disabled={busy} className="text-button danger" onClick={() => remove(item.id)}>Delete</button></div></div>)}</section></div> : <section className="panel">{tab === 'reviews' && reviews.map(r => <div className="admin-item" key={r.id}><div><strong>{r.title || 'Untitled review'}</strong><p>{r.user.username} · {r.product.name} · {r.approved ? 'Visible' : 'Hidden'}</p><p>{r.content}</p></div><button className="text-button" disabled={busy} onClick={() => mutate(`reviews/${r.id}`, 'PATCH', { approved: !r.approved })}>{r.approved ? 'Hide review' : 'Approve review'}</button></div>)}{tab === 'users' && users.map(u => <div className="admin-item" key={u.id}><div><strong>{u.username}</strong><p>{u.email} · {u.role} · {u.disabled ? 'Disabled' : 'Active'}</p></div><button className="text-button" disabled={busy} onClick={() => mutate(`users/${u.id}`, 'PATCH', { disabled: !u.disabled })}>{u.disabled ? 'Enable' : 'Disable'}</button></div>)}{tab === 'reports' && (reports.length ? reports.map(r => <div className="admin-item" key={r.id}><div><strong>{r.reason}</strong><p>Reported by {r.user.username} · {r.status}</p><p>{r.review.title}: {r.review.content}</p></div>{r.status === 'OPEN' && <button className="text-button" disabled={busy} onClick={() => mutate(`reports/${r.id}`, 'PATCH')}>Resolve</button>}</div>) : <div className="empty"><h3>All clear.</h3><p>No reported reviews.</p></div>)}</section>}</>;
+}

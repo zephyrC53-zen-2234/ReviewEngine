@@ -1,6 +1,10 @@
 import Link from 'next/link';
-import {getProducts,getCategories} from '@/lib/data';
-import {ProductCard} from '@/components/product-card';
-import {SearchBox} from '@/components/search';
-export const metadata={title:'Search',robots:{index:false}};
-export default async function Search({searchParams}:{searchParams:Promise<{q?:string}>}){const {q=''}=await searchParams;const query=q.trim().slice(0,80).toLowerCase();const [products,categories]=await Promise.all([getProducts(),getCategories()]);const found=query?products.filter(p=>p.name.toLowerCase().includes(query)||p.category.name.toLowerCase().includes(query)):[];const cats=query?categories.filter(c=>c.name.toLowerCase().includes(query)):[];return <main className="container page"><header className="page-heading"><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h1>{q?`Results for “${q.slice(0,80)}”`:'What are you looking for?'}</h1></header><SearchBox large/>{cats.length>0&&<div className="admin-tabs">{cats.map(c=><Link className="button secondary" key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>}<div className="product-grid" style={{marginTop:30}}>{found.map(p=><ProductCard key={p.id} product={p}/>)}</div>{query&&!found.length&&!cats.length&&<div className="empty"><h3>No matches yet.</h3><p>Try a product name or a broader category.</p><Link href="/categories" className="button secondary">Explore categories</Link></div>}</main>}
+import { getProducts, getCategories } from '@/lib/data';
+import { ProductCard } from '@/components/product-card';
+import { SearchBox } from '@/components/search';
+export const metadata = { title: 'Search', robots: { index: false } };
+export default async function Search({ searchParams }: {
+    searchParams: Promise<{
+        q?: string;
+    }>;
+}) { const { q = '' } = await searchParams; const query = q.trim().slice(0, 80).toLowerCase(); const [products, categories] = await Promise.all([getProducts(), getCategories()]); const found = query ? products.filter(p => p.name.toLowerCase().includes(query) || p.category.name.toLowerCase().includes(query)) : []; const cats = query ? categories.filter(c => c.name.toLowerCase().includes(query)) : []; return <main className="container page"><header className="page-heading"><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h1>{q ? `Results for “${q.slice(0, 80)}”` : 'What are you looking for?'}</h1></header><SearchBox large/>{cats.length > 0 && <div className="admin-tabs">{cats.map(c => <Link className="button secondary" key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}</div>}<div className="product-grid" style={{ marginTop: 30 }}>{found.map(p => <ProductCard key={p.id} product={p}/>)}</div>{query && !found.length && !cats.length && <div className="empty"><h3>No matches yet.</h3><p>Try a product name or a broader category.</p><Link href="/categories" className="button secondary">Explore categories</Link></div>}</main>; }
